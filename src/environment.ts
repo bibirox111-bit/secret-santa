@@ -1,7 +1,7 @@
 export const environment = {
   firebase: {
     apiKey: "<PLACEHOLDER>",
-    authDomain: "secretsanta-d141b.firebaseapp.com",
+    authDomain: "<PLACEHOLDER>",
     projectId: "<PLACEHOLDER>",
     storageBucket: "<PLACEHOLDER>",
     messagingSenderId: "<PLACEHOLDER>",
