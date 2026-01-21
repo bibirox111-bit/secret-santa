@@ -1,12 +1,92 @@
-<div>
-  <h2>Auth</h2>
-  <input type="email" [(ngModel)]="email" placeholder="Email">
-  <input type="password" [(ngModel)]="password" placeholder="Password">
-  <button (click)="register()">Register</button>
-  <button (click)="login()">Login</button>
-  <button (click)="loginWithGoogle()">Login with Google</button>
-  <button (click)="logout()">Logout</button>
-  @if (errorMessage) {
-    <p style="color:red">{{ errorMessage }}</p>
-  }
-</div>
+<mat-card class="auth-card">
+  <mat-card-title>
+    {{ isRegisterMode ? 'Create your account' : 'Welcome to Secret Santa' }}
+  </mat-card-title>
+
+  <mat-card-subtitle>
+    {{
+      isRegisterMode
+        ? 'Join the gift exchange in just a minute'
+        : 'Sign in to join the gift exchange'
+    }}
+  </mat-card-subtitle>
+
+  <mat-card-content>
+    @if (isRegisterMode) {
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Name</mat-label>
+        <input matInput [(ngModel)]="name" />
+      </mat-form-field>
+    }
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Email</mat-label>
+      <input matInput type="email" [(ngModel)]="email" />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Password</mat-label>
+      <input matInput type="password" [(ngModel)]="password" />
+    </mat-form-field>
+
+    @if (errorMessage) {
+      <p class="error">{{ errorMessage }}</p>
+    }
+  </mat-card-content>
+
+  <mat-card-actions>
+    <!-- LOGIN MODE -->
+    @if (!isRegisterMode) {
+      <button
+        mat-raised-button
+        color="primary"
+        class="full-width"
+        (click)="login()">
+        Login
+      </button>
+
+      <button
+        mat-stroked-button
+        class="full-width google-btn"
+        (click)="loginWithGoogle()">
+        <img
+          src="https://www.svgrepo.com/show/475656/google-color.svg"
+          class="google-icon"
+          alt="Google" />
+        Login with Google
+      </button>
+
+      <div class="divider">OR</div>
+
+      <p class="helper-text">
+        Don’t have an account yet?
+      </p>
+
+      <button
+        mat-flat-button
+        color="accent"
+        class="full-width"
+        (click)="switchMode()">
+        Create an account
+      </button>
+    }
+
+    <!-- REGISTER MODE -->
+    @if (isRegisterMode) {
+      <button
+        mat-raised-button
+        color="primary"
+        class="full-width"
+        (click)="register()">
+        Create account
+      </button>
+
+      <button
+        mat-button
+        class="back-btn"
+        (click)="switchMode()">
+        ← Back to login
+      </button>
+    }
+  </mat-card-actions>
+</mat-card>
