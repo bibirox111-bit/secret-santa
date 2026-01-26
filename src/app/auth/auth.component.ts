@@ -1,8 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-
-import { AuthService } from '../services/auth.service';
+import { onValue, ref } from '@angular/fire/database';
 
 // Angular Material
 import { MatCardModule } from '@angular/material/card';
@@ -10,6 +9,10 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+
+// Services
+import { UserService } from '../services/user/user.service';
+import { AuthService } from '../services/auth/auth.service';
 
 @Component({
   selector: 'app-auth',
@@ -34,7 +37,7 @@ export class AuthComponent {
   password = '';
   errorMessage = '';
 
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService, private userService: UserService) {}
 
   async login() {
     try {
@@ -47,6 +50,12 @@ export class AuthComponent {
   async register() {
     try {
       await this.authService.register(this.email, this.password);
+      this.userService.saveUser('51251', { name: 'Tomek', email: this.email });
+
+      // todo: remove console.log and adapt all the methods to save users when logging in.
+      this.userService.user$('51251').subscribe(data => {
+        console.log(data);
+      });
       // name can be stored later in Firestore / DB
     } catch (error: any) {
       this.errorMessage = error.message;
