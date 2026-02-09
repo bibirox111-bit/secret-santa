@@ -1,0 +1,22 @@
+<header class="top-nav">
+  <div class="left">
+    <span class="logo">🎁 Secret Santa</span>
+  </div>
+
+  <div class="right">
+    <button mat-icon-button (click)="theme.toggle()">
+      <mat-icon>
+        {{ theme.current === 'dark' ? 'light_mode' : 'dark_mode' }}
+      </mat-icon>
+    </button>
+    @if (authService.user$ | async; as user) {
+      <span class="user">
+        Hi, {{ user.displayName ?? user.email }}
+      </span>
+
+      <button mat-button (click)="logout()">
+        Logout
+      </button>
+    }
+  </div>
+</header>

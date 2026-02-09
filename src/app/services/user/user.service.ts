@@ -20,7 +20,7 @@ export class UserService {
         sub.next(snapshot.val());
       });
 
-      return () => off(userRef, 'value', unsubscribe);
+      return unsubscribe;
     });
   }
 }

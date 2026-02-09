@@ -1,0 +1,5 @@
+<h1>home</h1>
+
+@if (user$ | async; as user) {
+  <p>Welcome, {{ user.displayName }}</p>
+}

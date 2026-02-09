@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Auth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, authState, GoogleAuthProvider, signInWithPopup } from '@angular/fire/auth';
 import { Observable } from 'rxjs';
-import { User } from 'firebase/auth';
+import { updateProfile, User } from 'firebase/auth';
 
 @Injectable({
   providedIn: 'root'
@@ -14,8 +14,19 @@ export class AuthService {
   }
 
   // Rejestracja
-  register(email: string, password: string) {
-    return createUserWithEmailAndPassword(this.auth, email, password);
+  async register(email: string, password: string, name: string) {
+    const cred = await createUserWithEmailAndPassword(
+      this.auth,
+      email,
+      password
+    );
+
+    // ✅ set displayName on Firebase Auth user
+    await updateProfile(cred.user, {
+      displayName: name,
+    });
+
+    return cred;
   }
 
   // Logowanie

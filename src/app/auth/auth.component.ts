@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { onValue, ref } from '@angular/fire/database';
@@ -13,6 +13,7 @@ import { MatIconModule } from '@angular/material/icon';
 // Services
 import { UserService } from '../services/user/user.service';
 import { AuthService } from '../services/auth/auth.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-auth',
@@ -37,7 +38,16 @@ export class AuthComponent {
   password = '';
   errorMessage = '';
 
-  constructor(private authService: AuthService, private userService: UserService) {}
+  constructor(private authService: AuthService, private userService: UserService, private router: Router) {}
+  
+
+  ngOnInit() {
+    this.authService.user$.subscribe(user => {
+      if (user) {
+        this.router.navigate(['/app']);
+      }
+    });
+  }
 
   async login() {
     try {
@@ -49,14 +59,9 @@ export class AuthComponent {
 
   async register() {
     try {
-      await this.authService.register(this.email, this.password);
-      this.userService.saveUser('51251', { name: 'Tomek', email: this.email });
-
-      // todo: remove console.log and adapt all the methods to save users when logging in.
-      this.userService.user$('51251').subscribe(data => {
-        console.log(data);
-      });
-      // name can be stored later in Firestore / DB
+      const cred = await this.authService.register(this.email, this.password, this.name);
+      const uid = cred.user.uid;
+      await this.userService.saveUser(uid, { name: this.name, email: this.email });
     } catch (error: any) {
       this.errorMessage = error.message;
     }

@@ -18,7 +18,6 @@ mat-card-title {
 mat-card-subtitle {
   text-align: center;
   margin-bottom: 20px;
-  color: rgba(0, 0, 0, 0.6);
 }
 
 mat-card-actions {
@@ -44,14 +43,12 @@ mat-card-actions {
 .divider {
   text-align: center;
   font-size: 12px;
-  color: rgba(0, 0, 0, 0.5);
   margin: 10px 0;
 }
 
 .helper-text {
   text-align: center;
   font-size: 14px;
-  color: rgba(0, 0, 0, 0.7);
   margin: 0;
 }
 
@@ -65,7 +62,6 @@ mat-card-actions {
 .back-btn {
   margin-top: 8px;
   font-size: 14px;
-  color: rgba(0, 0, 0, 0.7);
 }
 
 .back-btn:hover {

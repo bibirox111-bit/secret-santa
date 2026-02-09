@@ -1,0 +1,19 @@
+.top-nav {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: #1976d2;
+}
+
+.logo {
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
