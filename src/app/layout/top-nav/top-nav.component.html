@@ -1,22 +1,35 @@
 <header class="top-nav">
   <div class="left">
-    <span class="logo">🎁 Secret Santa</span>
+    <span class="logo" (click)="navigateHome()">🎁 Secret Santa</span>
   </div>
 
+  <nav class="nav-links">
+    <a class="nav-link" (click)="navigateHome()">
+      <mat-icon>home</mat-icon>
+      <span class="link-text">Home</span>
+    </a>
+    <a class="nav-link" (click)="navigateToEvents()">
+      <mat-icon>celebration</mat-icon>
+      <span class="link-text">Events</span>
+    </a>
+  </nav>
+
   <div class="right">
-    <button mat-icon-button (click)="theme.toggle()">
+    <button mat-icon-button (click)="theme.toggle()" class="theme-button">
       <mat-icon>
         {{ theme.current === 'dark' ? 'light_mode' : 'dark_mode' }}
       </mat-icon>
     </button>
     @if (authService.user$ | async; as user) {
-      <span class="user">
-        Hi, {{ user.displayName ?? user.email }}
-      </span>
-
-      <button mat-button (click)="logout()">
-        Logout
-      </button>
+      <div class="user-section">
+        <span class="user-name">
+          {{ user.displayName ?? user.email }}
+        </span>
+        <button mat-stroked-button (click)="logout()" class="logout-btn">
+          <mat-icon>logout</mat-icon>
+          Logout
+        </button>
+      </div>
     }
   </div>
 </header>

@@ -3,17 +3,142 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
-  background: #1976d2;
+  padding: 0 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  gap: 24px;
+}
+
+.left {
+  display: flex;
+  align-items: center;
 }
 
 .logo {
-  font-weight: 600;
-  font-size: 18px;
+  font-weight: 700;
+  font-size: 20px;
+  color: white;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.logo:hover {
+  opacity: 0.8;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex: 1;
+  margin-left: 32px;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.nav-link:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.nav-link mat-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
+.link-text {
+  display: none;
 }
 
 .right {
   display: flex;
   align-items: center;
+  gap: 16px;
+  margin-left: auto;
+}
+
+.theme-button {
+  color: white;
+}
+
+.user-section {
+  display: flex;
+  align-items: center;
   gap: 12px;
+}
+
+.user-name {
+  color: white;
+  font-size: 13px;
+  font-weight: 500;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: white;
+  border-color: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+}
+
+.logout-btn:hover {
+  border-color: white;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.logout-btn mat-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+@media (max-width: 768px) {
+  .top-nav {
+    padding: 0 12px;
+    gap: 12px;
+  }
+
+  .nav-links {
+    display: none;
+  }
+
+  .logo {
+    font-size: 16px;
+  }
+
+  .user-section {
+    gap: 8px;
+  }
+
+  .user-name {
+    display: none;
+  }
+
+  .logout-btn {
+    padding: 6px 12px;
+  }
+}
+
+@media (min-width: 768px) {
+  .link-text {
+    display: inline;
+  }
 }

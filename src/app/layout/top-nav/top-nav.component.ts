@@ -4,10 +4,11 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth/auth.service';
 import { ThemeService } from '../../services/theme/theme.service';
 import { MatIcon } from "@angular/material/icon";
+import { MatButton } from "@angular/material/button";
 
 @Component({
   selector: 'app-top-nav',
-  imports: [AsyncPipe, MatIcon],
+  imports: [AsyncPipe, MatIcon, MatButton],
   templateUrl: './top-nav.component.html',
   styleUrl: './top-nav.component.css',
 })
@@ -15,6 +16,14 @@ export class TopNavComponent {
   authService = inject(AuthService);
   router = inject(Router);
   theme = inject(ThemeService);
+
+  navigateHome() {
+    this.router.navigate(['/app']);
+  }
+
+  navigateToEvents() {
+    this.router.navigate(['/app/events']);
+  }
 
   async logout() {
     await this.authService.logout();
