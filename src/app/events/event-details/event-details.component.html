@@ -1,0 +1,78 @@
+<div *ngIf="event$ | async as event" class="details-container">
+  <div class="header">
+    <button mat-icon-button (click)="goBack()" class="back-btn">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <div>
+      <h1>{{ event.name }}</h1>
+      <p class="subtitle">Organized by {{ event.organizerName }}</p>
+    </div>
+  </div>
+
+  <div class="details-grid">
+    <!-- Event Info -->
+    <mat-card class="info-card">
+      <mat-card-header>
+        <mat-card-title>About This Event</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="detail-section">
+          <h3>Description</h3>
+          <p>{{ event.description || 'No description provided' }}</p>
+        </div>
+        <div class="detail-section">
+          <h3>Status</h3>
+          <span class="status-badge" [ngClass]="'status-' + event.status">
+            {{ event.status | titlecase }}
+          </span>
+        </div>
+        <div class="detail-section">
+          <h3>Created</h3>
+          <p>{{ event.createdAt | date: 'long' }}</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Participants -->
+    <mat-card class="participants-card">
+      <mat-card-header>
+        <mat-card-title>
+          Participants ({{ event.participants.length }})
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <mat-list>
+          <mat-list-item *ngFor="let participant of event.participants; trackBy: trackByUserId">
+            <mat-icon matListItemIcon>person</mat-icon>
+            <div matListItemTitle>{{ participant.displayName }}</div>
+            <div matListItemLine>{{ participant.email }}</div>
+            <span *ngIf="participant.userId === event.organizerId" class="organizer-badge" matListItemMeta>
+              <mat-icon>shield</mat-icon>
+              Organizer
+            </span>
+          </mat-list-item>
+        </mat-list>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Your Assignment -->
+    <mat-card *ngIf="event.status === 'completed' && event.draws && userAssignment" class="assignment-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>card_giftcard</mat-icon>
+          Your Match
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="assignment-display">
+          <div class="you">You</div>
+          <mat-icon class="arrow">arrow_forward</mat-icon>
+          <div class="target">{{ userAssignment.toName }}</div>
+        </div>
+        <p class="assignment-message">
+          You're responsible for buying a gift for <strong>{{ userAssignment.toName }}</strong>! 🎁
+        </p>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>

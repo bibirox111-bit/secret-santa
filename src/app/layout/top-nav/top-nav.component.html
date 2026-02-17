@@ -15,20 +15,16 @@
   </nav>
 
   <div class="right">
-    <button mat-icon-button (click)="theme.toggle()" class="theme-button">
-      <mat-icon>
-        {{ theme.current === 'dark' ? 'light_mode' : 'dark_mode' }}
-      </mat-icon>
-    </button>
     @if (authService.user$ | async; as user) {
       <div class="user-section">
-        <span class="user-name">
-          {{ user.displayName ?? user.email }}
-        </span>
-        <button mat-stroked-button (click)="logout()" class="logout-btn">
-          <mat-icon>logout</mat-icon>
-          Logout
-        </button>
+        <mat-icon [matMenuTriggerFor]="userMenu">account_circle</mat-icon>
+        <mat-icon (click)="logout()">logout</mat-icon>
+        <mat-menu #userMenu="matMenu">
+          <button mat-menu-item (click)="theme.toggle()">
+            <mat-icon>{{ theme.current === 'dark' ? 'light_mode' : 'dark_mode' }}</mat-icon>
+            <span>Switch to {{ theme.current === 'dark' ? 'Light' : 'Dark' }} Mode</span>
+          </button>
+        </mat-menu>
       </div>
     }
   </div>

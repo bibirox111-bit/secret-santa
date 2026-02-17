@@ -4,11 +4,11 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth/auth.service';
 import { ThemeService } from '../../services/theme/theme.service';
 import { MatIcon } from "@angular/material/icon";
-import { MatButton } from "@angular/material/button";
+import { MatMenuModule } from '@angular/material/menu';
 
 @Component({
   selector: 'app-top-nav',
-  imports: [AsyncPipe, MatIcon, MatButton],
+  imports: [AsyncPipe, MatIcon, MatMenuModule],
   templateUrl: './top-nav.component.html',
   styleUrl: './top-nav.component.css',
 })

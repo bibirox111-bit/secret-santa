@@ -80,34 +80,16 @@
   gap: 12px;
 }
 
-.user-name {
-  color: white;
-  font-size: 13px;
-  font-weight: 500;
-  max-width: 150px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.user-section mat-icon{
+  font-size: 46px;
+  width: 46px;
+  height: 46px;
+  background-color: transparent;
+  margin-right: 12px;
 }
 
-.logout-btn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: white;
-  border-color: rgba(255, 255, 255, 0.5);
-  font-size: 12px;
-}
-
-.logout-btn:hover {
-  border-color: white;
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.logout-btn mat-icon {
-  font-size: 16px;
-  width: 16px;
-  height: 16px;
+.user-section mat-icon:hover {
+  color: var(--background-color);
 }
 
 @media (max-width: 768px) {
@@ -126,14 +108,6 @@
 
   .user-section {
     gap: 8px;
-  }
-
-  .user-name {
-    display: none;
-  }
-
-  .logout-btn {
-    padding: 6px 12px;
   }
 }
 

@@ -1,0 +1,85 @@
+<div *ngIf="event$ | async as event" class="drawing-container">
+  <div class="header">
+    <button mat-icon-button (click)="goBack()" class="back-btn">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <div>
+      <h1>Secret Santa Drawing</h1>
+      <p class="subtitle">{{ event.name }}</p>
+    </div>
+  </div>
+
+  <mat-card class="drawing-card">
+    <mat-card-content>
+      <div class="drawing-content">
+        <div *ngIf="currentStep === 'confirm'" class="confirm-step">
+          <mat-icon class="icon">card_giftcard</mat-icon>
+          <h2>Ready to draw?</h2>
+          <p>You're about to randomly assign {{ event.participants.length }} participants to exchange gifts.</p>
+
+          <div class="participant-list">
+            <h3>Participants:</h3>
+            <ul>
+              <li *ngFor="let participant of event.participants; trackBy: trackByUserId">
+                <mat-icon>person</mat-icon>
+                {{ participant.displayName }}
+              </li>
+            </ul>
+          </div>
+
+          <div class="button-group">
+            <button mat-raised-button color="accent" (click)="performDrawing()" [disabled]="isDrawing">
+              <ng-container *ngIf="isDrawing">
+                <mat-icon>hourglass_top</mat-icon>
+                Drawing...
+              </ng-container>
+              <ng-container *ngIf="!isDrawing">
+                <mat-icon>shuffle</mat-icon>
+                Proceed with Drawing
+              </ng-container>
+            </button>
+            <button mat-stroked-button (click)="goBack()">
+              Cancel
+            </button>
+          </div>
+        </div>
+
+        <div *ngIf="currentStep === 'drawing'" class="drawing-step">
+          <div class="drawing-animation">
+            <mat-icon class="spinning">shuffle</mat-icon>
+            <p class="animated-text">Drawing in progress...</p>
+          </div>
+        </div>
+
+        <div *ngIf="currentStep === 'complete'" class="complete-step">
+          <mat-icon class="success-icon">check_circle</mat-icon>
+          <h2>Drawing Complete! 🎉</h2>
+          <p>Everyone has been randomly assigned.</p>
+
+          <div class="results-preview">
+            <h3>Assignments Preview:</h3>
+            <div class="assignments-list">
+              <div *ngFor="let assignment of assignments; trackBy: trackByAssignment" class="assignment-item">
+                <span class="from">{{ assignment.fromName }}</span>
+                <mat-icon class="arrow">arrow_forward</mat-icon>
+                <span class="to">{{ assignment.toName }}</span>
+              </div>
+            </div>
+          </div>
+
+          <p class="info-text">
+            <mat-icon>info</mat-icon>
+            Each participant can now see who they're drawing a gift for!
+          </p>
+
+          <div class="button-group">
+            <button mat-raised-button color="accent" (click)="closeDrawing()">
+              <mat-icon>check</mat-icon>
+              Done
+            </button>
+          </div>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

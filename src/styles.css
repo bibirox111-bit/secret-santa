@@ -3,12 +3,44 @@
 /* 🌞 Light theme (default) */
 html.light {
   color-scheme: light;
+  --background-color: #ffffff;
+  --text-color: #000000;
+  --primary-color: #ae76e6;
+  --secondary-color: #667eea;
+  --card-background: #f5f5f5;
+  --card-shadow: rgba(0, 0, 0, 0.1);
 }
 
 /* 🌙 Dark theme */
 html.dark {
   color-scheme: dark;
+  --background-color: #252525;
+  --text-color: #ffffff;
+  --primary-color: #667eea;
+  --secondary-color: #764ba2;
+  --card-background: #252525;
+  --card-shadow: rgba(255, 255, 255, 0.1);
 }
 
 html, body { height: 100%; }
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+body {
+  margin: 0;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
+
+/* Update global styles for cards and buttons */
+button {
+  background-color: var(--secondary-color);
+  color: var(--text-color);
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: var(--primary-color);
+}

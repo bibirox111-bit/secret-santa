@@ -1,8 +1,7 @@
 .auth-card {
-  max-width: 420px;
-  margin: 100px auto;
-  padding: 28px;
-  border-radius: 18px;
+  background-color: var(--card-background);
+  box-shadow: 0 4px 16px var(--card-shadow);
+  color: var(--text-color);
 }
 
 .full-width {
@@ -27,11 +26,12 @@ mat-card-actions {
 }
 
 .google-btn {
-  display: flex;
-  border-color: #d1d5db;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
+  background-color: var(--primary-color);
+  color: var(--text-color);
+}
+
+.google-btn:hover {
+  background-color: var(--secondary-color);
 }
 
 .google-icon {
@@ -60,10 +60,9 @@ mat-card-actions {
 }
 
 .back-btn {
-  margin-top: 8px;
-  font-size: 14px;
+  color: var(--primary-color);
 }
 
 .back-btn:hover {
-  text-decoration: underline;
+  color: var(--secondary-color);
 }
