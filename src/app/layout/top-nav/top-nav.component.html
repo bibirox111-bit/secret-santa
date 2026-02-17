@@ -16,7 +16,11 @@
 
   <div class="right">
     @if (authService.user$ | async; as user) {
+
       <div class="user-section">
+              <img class="avatar"
+  src="https://api.dicebear.com/9.x/initials/svg?seed={{user.displayName}}"
+  alt="avatar" />
         <mat-icon [matMenuTriggerFor]="userMenu">account_circle</mat-icon>
         <mat-icon (click)="logout()">logout</mat-icon>
         <mat-menu #userMenu="matMenu">
