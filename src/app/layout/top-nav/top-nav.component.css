@@ -80,6 +80,12 @@
   gap: 12px;
 }
 
+.user-section img {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+}
+
 .user-section mat-icon{
   font-size: 46px;
   width: 46px;
