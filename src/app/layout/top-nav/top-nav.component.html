@@ -12,15 +12,46 @@
       <mat-icon>celebration</mat-icon>
       <span class="link-text">Events</span>
     </a>
+    <a class="nav-link" (click)="navigateToInvitations()" [matBadge]="(invitesCount$ | async) || 0" matBadgeColor="accent" [matBadgeHidden]="((invitesCount$ | async) || 0) === 0">
+      <mat-icon>mail</mat-icon>
+      <span class="link-text">Invitations</span>
+    </a>
   </nav>
 
   <div class="right">
     @if (authService.user$ | async; as user) {
-
       <div class="user-section">
-              <img class="avatar"
-  src="https://api.dicebear.com/9.x/initials/svg?seed={{user.displayName}}"
-  alt="avatar" />
+        <img class="avatar"
+          src="https://api.dicebear.com/9.x/initials/svg?seed={{user.displayName}}"
+          alt="avatar"
+          [matMenuTriggerFor]="invitesMenu"
+          [matBadge]="(invitesCount$ | async) || 0"
+          matBadgeColor="accent"
+          [matBadgeHidden]="((invitesCount$ | async) || 0) === 0"
+          class="avatar-badge" />
+        <mat-menu #invitesMenu="matMenu">
+          @let count = (invitesCount$ | async) || 0;
+          @if (count > 0) {
+            <div style="padding: 8px 16px; min-width: 250px">
+              <p style="margin: 0; font-weight: 500; color: #666; font-size: 12px">PENDING INVITATIONS</p>
+              @for (invite of pendingInvites$ | async; track invite.id) {
+                <div style="padding: 8px; margin: 8px 0; background: #f5f5f5; border-radius: 4px; font-size: 13px">
+                  <strong>{{ invite.eventId }}</strong><br>
+                  From: {{ invite.inviterUserId }}
+                </div>
+              }
+              <hr style="margin: 8px 0">
+              <button mat-menu-item (click)="navigateToInvitations()" style="width: 100%; justify-content: center">
+                <mat-icon>arrow_forward</mat-icon>
+                <span>View All</span>
+              </button>
+            </div>
+          } @else {
+            <button mat-menu-item disabled>
+              <span>No pending invitations</span>
+            </button>
+          }
+        </mat-menu>
         <mat-icon [matMenuTriggerFor]="userMenu">account_circle</mat-icon>
         <mat-icon (click)="logout()">logout</mat-icon>
         <mat-menu #userMenu="matMenu">

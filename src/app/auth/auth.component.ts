@@ -1,7 +1,6 @@
 import { Component, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { onValue, ref } from '@angular/fire/database';
 
 // Angular Material
 import { MatCardModule } from '@angular/material/card';
@@ -61,9 +60,19 @@ export class AuthComponent {
     try {
       const cred = await this.authService.register(this.email, this.password, this.name);
       const uid = cred.user.uid;
-      await this.userService.saveUser(uid, { name: this.name, email: this.email });
+      console.log('User created with UID:', uid);
+      
+      try {
+        await this.userService.saveUser(uid, { name: this.name, email: this.email });
+        console.log('User profile saved to Firestore');
+      } catch (firestoreError: any) {
+        console.error('Failed to save user profile:', firestoreError.message, firestoreError);
+        this.errorMessage = 'User created but profile save failed: ' + firestoreError.message;
+        throw firestoreError;
+      }
     } catch (error: any) {
-      this.errorMessage = error.message;
+      console.error('Registration error:', error.message || error);
+      this.errorMessage = error.message || 'Registration failed';
     }
   }
 

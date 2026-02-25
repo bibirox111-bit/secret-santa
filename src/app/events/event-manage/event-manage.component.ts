@@ -11,16 +11,21 @@ import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { Observable } from 'rxjs';
+import { Observable, of, combineLatest } from 'rxjs';
+import { map, startWith, switchMap, take } from 'rxjs/operators';
 import { SecretSantaEvent } from '../../models/event.model';
 import { EventService } from '../../services/event/event.service';
+import { InvitationService, Invite } from '../../services/invitation/invitation.service';
+import { UserService } from '../../services/user/user.service';
+import { FirestoreTimestampPipe } from '../../shared/firestore-timestamp.pipe';
 
 @Component({
   selector: 'app-event-manage',
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule, MatListModule, MatDialogModule, MatSnackBarModule
+    MatFormFieldModule, MatInputModule, MatListModule, MatDialogModule, MatSnackBarModule,
+    FirestoreTimestampPipe
   ],
   template: `
     @if (event$ | async; as event) {
@@ -52,7 +57,7 @@ import { EventService } from '../../services/event/event.service';
               </div>
               <div class="detail-item">
                 <span class="label">Created</span>
-                <span class="value">{{ event.createdAt | date: 'medium' }}</span>
+                <span class="value">{{ event.createdAt | fsTimestamp | date: 'medium' }}</span>
               </div>
             </mat-card-content>
           </mat-card>
@@ -119,6 +124,23 @@ import { EventService } from '../../services/event/event.service';
                   </mat-list-item>
                 }
               </mat-list>
+              @if ((pendingInvitesSent$ | async)?.length; as count) {
+                @if (count > 0) {
+                  <h3 style="margin-top:16px">Pending Invitations Sent</h3>
+                  <mat-list>
+                    @for (invite of (pendingInvitesSent$ | async)!; track invite.id) {
+                      <mat-list-item>
+                        <mat-icon matListItemIcon>mail</mat-icon>
+                        <div matListItemTitle>{{ invite.invitedUserName || invite.invitedUserId }}</div>
+                        <div matListItemLine>{{ invite.status | titlecase }} — {{ invite.createdAt | fsTimestamp | date:'short' }}</div>
+                        <button mat-icon-button matListItemMeta *ngIf="invite.id && currentUserId === event?.organizerId" (click)="onCancelInvite(invite.id)">
+                          <mat-icon>cancel</mat-icon>
+                        </button>
+                      </mat-list-item>
+                    }
+                  </mat-list>
+                }
+              }
             </mat-card-content>
           </mat-card>
         </div>
@@ -385,13 +407,16 @@ export class EventManageComponent implements OnInit {
   private router = inject(Router);
   private auth = inject(Auth);
   private eventService = inject(EventService);
+  private invitationService = inject(InvitationService);
+  private userService = inject(UserService);
   private snackBar = inject(MatSnackBar);
 
   event$!: Observable<SecretSantaEvent | null>;
+  pendingInvitesSent$!: Observable<Invite[]>;
   eventId: string = '';
   newParticipantEmail = '';
   addErrorMessage = '';
-  currentUserId = this.auth.currentUser?.uid || '';
+  currentUserId: string | undefined = undefined;
 
   ngOnInit() {
     this.eventId = this.route.snapshot.paramMap.get('id') || '';
@@ -399,35 +424,97 @@ export class EventManageComponent implements OnInit {
       this.router.navigate(['/app/events']);
       return;
     }
+    this.currentUserId = this.auth.currentUser?.uid;
     this.event$ = this.eventService.getEvent(this.eventId);
+    
+    // Get pending invites sent by the current user for this event (only show pending status)
+    if (this.currentUserId) {
+      this.pendingInvitesSent$ = this.invitationService.getInvitesByInviter(this.currentUserId).pipe(
+        // filter invites for this event and pending status, then enrich names if missing
+        switchMap(invites => {
+          const filtered = invites.filter(inv => inv.eventId === this.eventId && inv.status === 'pending');
+          console.log('[EventManage] Pending invites for event:', this.eventId, 'Count:', filtered.length, 'Data:', filtered);
+          if (filtered.length === 0) return of([]);
+
+          const enriched$ = filtered.map(inv => {
+            if (inv.invitedUserName) return of(inv);
+            return this.userService.user$(inv.invitedUserId).pipe(
+              take(1),
+              map(user => ({ ...inv, invitedUserName: user?.name || user?.['displayName'] || inv.invitedUserId }))
+            );
+          });
+
+          return combineLatest(enriched$);
+        }),
+        startWith([])
+      );
+    } else {
+      this.pendingInvitesSent$ = of([]);
+    }
   }
 
   addParticipant() {
     this.addErrorMessage = '';
+    
+    // Get current user ID at time of invitation
+    const currentUserId = this.auth.currentUser?.uid;
+    if (!currentUserId) {
+      this.addErrorMessage = 'You must be logged in to invite participants';
+      return;
+    }
+    
     if (!this.newParticipantEmail.trim()) {
-      this.addErrorMessage = 'Please enter an email';
+      this.addErrorMessage = 'Please enter an email or user id';
       return;
     }
 
-    this.eventService.addParticipant(
-      this.eventId,
-      `user_${Date.now()}`,
-      this.newParticipantEmail,
-      this.newParticipantEmail.split('@')[0]
-    ).then(() => {
+    const identifier = this.newParticipantEmail.trim();
+    console.log('👥 [EventManage] Inviting participant:', identifier, 'to event:', this.eventId, 'by user:', currentUserId);
+
+    this.eventService.inviteParticipant(this.eventId, identifier, currentUserId).then(() => {
+      console.log('✅ [EventManage] Invitation sent successfully for:', identifier);
       this.newParticipantEmail = '';
-      this.snackBar.open('Participant added!', 'Close', { duration: 2000 });
-    }).catch(error => {
-      this.addErrorMessage = 'Failed to add participant';
+      this.snackBar.open('Invitation sent!', 'Close', { duration: 2000 });
+    }).catch((error: any) => {
+      const errorMsg = error?.message || String(error);
+      console.error('❌ [EventManage] Failed to invite:', identifier, 'Error:', errorMsg, error);
+      if (errorMsg === 'user not found') {
+        this.addErrorMessage = 'User not found';
+      } else if (errorMsg === 'invite-exists' || error?.inviteId) {
+        // Inform inviter that invite already exists
+        this.snackBar.open('User already invited and awaiting acceptance', 'Close', { duration: 4000 });
+      } else {
+        this.addErrorMessage = 'Failed to send invitation: ' + errorMsg;
+      }
     });
   }
 
-  removeParticipant(userId: string) {
-    if (confirm('Are you sure you want to remove this participant?')) {
-      this.eventService.removeParticipant(this.eventId, userId).then(() => {
-        this.snackBar.open('Participant removed', 'Close', { duration: 2000 });
-      });
+  async onCancelInvite(inviteId?: string) {
+    if (!inviteId) return;
+    if (!this.currentUserId) {
+      this.snackBar.open('You must be logged in to cancel invitations', 'Close', { duration: 3000 });
+      return;
     }
+    if (!confirm('Cancel this invitation?')) return;
+    try {
+      await this.invitationService.cancelInvite(inviteId, this.currentUserId);
+      this.snackBar.open('Invitation cancelled', 'Close', { duration: 2000 });
+    } catch (err: any) {
+      console.error('Failed to cancel invite:', err);
+      const msg = err?.message || String(err);
+      this.snackBar.open('Failed to cancel invite: ' + msg, 'Close', { duration: 4000 });
+    }
+  }
+
+  removeParticipant(userId: string) {
+    if (!confirm('Are you sure you want to remove this participant?')) return;
+    this.eventService.removeParticipant(this.eventId, userId).then(() => {
+      this.snackBar.open('Participant removed', 'Close', { duration: 2000 });
+    }).catch((err: any) => {
+      console.error('Failed to remove participant:', err);
+      const msg = err?.message || String(err);
+      this.snackBar.open('Failed to remove participant: ' + msg, 'Close', { duration: 4000 });
+    });
   }
 
   startDrawing() {

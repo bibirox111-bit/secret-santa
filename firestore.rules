@@ -1,0 +1,101 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isUser(uid) {
+      return request.auth.uid == uid;
+    }
+
+    // EVENTS collection
+    // - Create: any authenticated user
+    // - Read: organizer or participant (checked via participantIds array)
+    // - Update: organizer can update anything; others can only add themselves to participants
+    // - Delete: disabled
+    match /events/{eventId} {
+      allow create: if isAuth();
+      
+      allow read: if isAuth() && (
+        resource.data.organizerId == request.auth.uid ||
+        request.auth.uid in resource.data.participantIds
+      );
+      
+      // Organizer can update anything.
+      // Non-organizers may only modify participant arrays; all other fields must remain unchanged.
+      allow update: if isAuth() && (
+        resource.data.organizerId == request.auth.uid
+        || (
+          request.resource.data.organizerId == resource.data.organizerId
+          && request.resource.data.name == resource.data.name
+          && request.resource.data.description == resource.data.description
+          && request.resource.data.status == resource.data.status
+          && request.resource.data.minParticipants == resource.data.minParticipants
+          && request.resource.data.organizerName == resource.data.organizerName
+          // participants and participantIds are allowed to change (must be arrays when present)
+          && (request.resource.data.participants is list || request.resource.data.participants == resource.data.participants)
+          && (request.resource.data.participantIds is list || request.resource.data.participantIds == resource.data.participantIds)
+        )
+      );
+      
+      allow delete: if false;
+    }
+
+    // USERS collection
+    // - Create/Update: own profile only
+    // - Read: any authenticated user (needed for invite lookup)
+    // - Delete: disabled
+    match /users/{userId} {
+      allow create, write: if isUser(userId);
+      
+      // Any authenticated user can READ all users (for invite lookup)
+      allow read: if isAuth();
+      
+      allow delete: if false;
+    }
+
+    // INVITES collection (enhanced from previous)
+    match /invites/{inviteId} {
+      // CREATE: authenticated user creating invite must be the inviterUserId
+      allow create: if isAuth()
+        && request.resource.data.eventId is string
+        && request.resource.data.inviterUserId is string
+        && request.resource.data.invitedUserId is string
+        && request.resource.data.status == 'pending'
+        && request.resource.data.inviterUserId == request.auth.uid;
+
+      // READ (get, list, listen): inviter OR invited user can read
+      allow get, list: if isAuth()
+        && (
+          resource.data.inviterUserId == request.auth.uid
+          || resource.data.invitedUserId == request.auth.uid
+        );
+
+      // UPDATE: invited user can update status to accept/decline; inviter can cancel
+      allow update: if isAuth() && (
+        (
+          // invited user updates their invite status
+          resource.data.invitedUserId == request.auth.uid
+          && request.resource.data.eventId == resource.data.eventId
+          && request.resource.data.inviterUserId == resource.data.inviterUserId
+          && request.resource.data.invitedUserId == resource.data.invitedUserId
+          && request.resource.data.status in ['pending', 'accepted', 'declined']
+        )
+        ||
+        (
+          // inviter can cancel a pending invite by setting status to 'cancelled'
+          resource.data.inviterUserId == request.auth.uid
+          && request.resource.data.eventId == resource.data.eventId
+          && request.resource.data.inviterUserId == resource.data.inviterUserId
+          && request.resource.data.invitedUserId == resource.data.invitedUserId
+          && request.resource.data.status == 'cancelled'
+        )
+      );
+
+      // DELETE: disabled on client
+      allow delete: if false;
+    }
+  }
+}

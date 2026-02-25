@@ -5,10 +5,12 @@ export interface SecretSantaEvent {
   organizerId: string;
   organizerName: string;
   participants: EventParticipant[];
+  participantIds?: string[]; // Array of UIDs for Firestore rule checks
   status: 'pending' | 'active' | 'drawing' | 'completed';
   createdAt: number;
   draws?: EventAssignment[];
   minParticipants: number;
+  invites?: EventInvite[];
 }
 
 export interface EventParticipant {
@@ -16,6 +18,14 @@ export interface EventParticipant {
   email: string;
   displayName: string;
   joinedAt: number;
+}
+
+export interface EventInvite {
+  userId?: string;
+  email: string;
+  displayName?: string;
+  invitedAt: number;
+  status: 'pending' | 'accepted' | 'declined';
 }
 
 export interface EventAssignment {

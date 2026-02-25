@@ -9,11 +9,12 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatTabsModule } from '@angular/material/tabs';
 import { SecretSantaEvent } from '../../models/event.model';
 import { EventService } from '../../services/event/event.service';
+import { FirestoreTimestampPipe } from '../../shared/firestore-timestamp.pipe';
 
 @Component({
   selector: 'app-event-list',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatChipsModule, MatTabsModule],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatChipsModule, MatTabsModule, FirestoreTimestampPipe],
   template: `
     <div class="event-list-container">
       <div class="header">
@@ -138,7 +139,7 @@ import { EventService } from '../../services/event/event.service';
                     </div>
                     <mat-card-title>{{ event.name }}</mat-card-title>
                     <mat-card-subtitle>
-                      Completed {{ event.createdAt | date: 'short' }}
+                      Completed {{ event.createdAt | fsTimestamp | date: 'short' }}
                     </mat-card-subtitle>
                   </mat-card-header>
                   <mat-card-content>

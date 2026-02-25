@@ -28,7 +28,7 @@
         </div>
         <div class="detail-section">
           <h3>Created</h3>
-          <p>{{ event.createdAt | date: 'long' }}</p>
+          <p>{{ event.createdAt | fsTimestamp | date: 'long' }}</p>
         </div>
       </mat-card-content>
     </mat-card>

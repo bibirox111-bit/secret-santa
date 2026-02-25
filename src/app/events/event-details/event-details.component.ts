@@ -9,11 +9,12 @@ import { MatListModule } from '@angular/material/list';
 import { Observable } from 'rxjs';
 import { SecretSantaEvent } from '../../models/event.model';
 import { EventService } from '../../services/event/event.service';
+import { FirestoreTimestampPipe } from '../../shared/firestore-timestamp.pipe';
 
 @Component({
   selector: 'app-event-details',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatListModule],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatListModule, FirestoreTimestampPipe],
   templateUrl: './event-details.component.html',
   styleUrls: ['./event-details.component.css'],
 })
