@@ -9,6 +9,7 @@ export interface SecretSantaEvent {
   createdAt: number;
   draws?: EventAssignment[];
   minParticipants: number;
+  invites?: EventInvite[];
 }
 
 export interface EventParticipant {
@@ -16,6 +17,14 @@ export interface EventParticipant {
   email: string;
   displayName: string;
   joinedAt: number;
+}
+
+export interface EventInvite {
+  userId?: string;
+  email: string;
+  displayName?: string;
+  invitedAt: number;
+  status: 'pending' | 'accepted' | 'declined';
 }
 
 export interface EventAssignment {

@@ -119,6 +119,18 @@ import { EventService } from '../../services/event/event.service';
                   </mat-list-item>
                 }
               </mat-list>
+              @if (event.invites?.length) {
+                <h3 style="margin-top:16px">Pending Invitations</h3>
+                <mat-list>
+                  @for (invite of event.invites; track invite.email) {
+                    <mat-list-item>
+                      <mat-icon matListItemIcon>mail</mat-icon>
+                      <div matListItemTitle>{{ invite.displayName || invite.email }}</div>
+                      <div matListItemLine>{{ invite.email }} — {{ invite.status }}</div>
+                    </mat-list-item>
+                  }
+                </mat-list>
+              }
             </mat-card-content>
           </mat-card>
         </div>
@@ -405,20 +417,19 @@ export class EventManageComponent implements OnInit {
   addParticipant() {
     this.addErrorMessage = '';
     if (!this.newParticipantEmail.trim()) {
-      this.addErrorMessage = 'Please enter an email';
+      this.addErrorMessage = 'Please enter an email or user id';
       return;
     }
 
-    this.eventService.addParticipant(
-      this.eventId,
-      `user_${Date.now()}`,
-      this.newParticipantEmail,
-      this.newParticipantEmail.split('@')[0]
-    ).then(() => {
+    this.eventService.inviteParticipant(this.eventId, this.newParticipantEmail.trim()).then(() => {
       this.newParticipantEmail = '';
-      this.snackBar.open('Participant added!', 'Close', { duration: 2000 });
-    }).catch(error => {
-      this.addErrorMessage = 'Failed to add participant';
+      this.snackBar.open('Invitation sent!', 'Close', { duration: 2000 });
+    }).catch((error: any) => {
+      if (error?.message === 'user not found') {
+        this.addErrorMessage = 'User not found';
+      } else {
+        this.addErrorMessage = 'Failed to send invitation';
+      }
     });
   }
 
