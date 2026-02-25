@@ -8,6 +8,7 @@ import { EventCreateComponent } from './events/event-create/event-create.compone
 import { EventManageComponent } from './events/event-manage/event-manage.component';
 import { EventDrawingComponent } from './events/event-drawing/event-drawing.component';
 import { EventDetailsComponent } from './events/event-details/event-details.component';
+import { InboxComponent } from './invitations/inbox/inbox.component';
 
 export const routes: Routes = [
   {
@@ -25,6 +26,7 @@ export const routes: Routes = [
       { path: 'events/create', component: EventCreateComponent },
       { path: 'events/manage/:id', component: EventManageComponent },
       { path: 'events/drawing/:id', component: EventDrawingComponent },
+      { path: 'invitations', component: InboxComponent },
       { path: 'events/details/:id', component: EventDetailsComponent },
     ],
   },

@@ -84,6 +84,16 @@
   width: 46px;
   height: 46px;
   border-radius: 50%;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.user-section img:hover {
+  opacity: 0.8;
+}
+
+.user-section img.avatar-badge {
+  position: relative;
 }
 
 .user-section mat-icon{

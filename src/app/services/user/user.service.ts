@@ -1,26 +1,43 @@
 import { inject, Injectable } from '@angular/core';
-import { Database, off, onValue, ref, set } from '@angular/fire/database';
+import { Firestore, doc, docData, setDoc, serverTimestamp } from '@angular/fire/firestore';
 import { Observable } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+import { of } from 'rxjs';
+
+export interface User {
+  uid: string;
+  email: string;
+  name?: string;
+  createdAt?: any;
+}
 
 @Injectable({
   providedIn: 'root',
 })
 export class UserService {
-  private db = inject(Database);
+  private firestore = inject(Firestore);
 
-  saveUser(uid: string, data: any) {
-    return set(ref(this.db, `users/${uid}`), data);
+  async saveUser(uid: string, data: any): Promise<void> {
+    try {
+      const userRef = doc(this.firestore, `users/${uid}`);
+      const userData = {
+        uid,
+        ...data,
+        createdAt: serverTimestamp()
+      };
+      console.log('Saving user to Firestore:', userRef.path, userData);
+      await setDoc(userRef, userData, { merge: true });
+      console.log('User saved successfully to Firestore');
+    } catch (err) {
+      console.error('Error saving user to Firestore:', err);
+      throw err;
+    }
   }
 
   user$(uid: string): Observable<any> {
-    return new Observable(sub => {
-      const userRef = ref(this.db, `users/${uid}`);
-
-      const unsubscribe = onValue(userRef, snapshot => {
-        sub.next(snapshot.val());
-      });
-
-      return unsubscribe;
-    });
+    const userRef = doc(this.firestore, `users/${uid}`);
+    return docData(userRef).pipe(
+      catchError(() => of(null))
+    );
   }
 }

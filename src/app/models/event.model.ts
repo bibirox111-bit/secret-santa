@@ -5,6 +5,7 @@ export interface SecretSantaEvent {
   organizerId: string;
   organizerName: string;
   participants: EventParticipant[];
+  participantIds?: string[]; // Array of UIDs for Firestore rule checks
   status: 'pending' | 'active' | 'drawing' | 'completed';
   createdAt: number;
   draws?: EventAssignment[];

@@ -1,204 +1,218 @@
-import { inject, Injectable } from '@angular/core';
-import { Database, ref, set, query, orderByChild, equalTo, onValue, update } from '@angular/fire/database';
-import { get as firebaseGet } from 'firebase/database';
-import { Observable, BehaviorSubject } from 'rxjs';
-import { map, switchMap, startWith } from 'rxjs/operators';
+import { inject, Injectable, runInInjectionContext, Injector } from '@angular/core';
+import { Firestore, collection, collectionData, doc, docData, addDoc, query, where, orderBy, updateDoc, setDoc, arrayUnion, arrayRemove, serverTimestamp, getDocs as fsGetDocs, getDoc as fsGetDoc, runTransaction } from '@angular/fire/firestore';
+import { Observable, combineLatest } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
+import { of } from 'rxjs';
 import { SecretSantaEvent, EventAssignment } from '../../models/event.model';
+import { InvitationService } from '../invitation/invitation.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class EventService {
-  private db = inject(Database);
-  private eventCache$ = new BehaviorSubject<SecretSantaEvent[]>([]);
+  private firestore = inject(Firestore);
+  private injector = inject(Injector);
+  private invitationService = inject(InvitationService);
+  private eventsCol = () => collection(this.firestore, 'events');
 
-  createEvent(organizerId: string, organizerName: string, eventData: Partial<SecretSantaEvent>): Promise<string> {
-    const eventId = `event_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const event: SecretSantaEvent = {
-      id: eventId,
+  async createEvent(organizerId: string, organizerName: string, eventData: Partial<SecretSantaEvent>): Promise<string> {
+    const event: Omit<SecretSantaEvent, 'id'> = {
       name: eventData.name || 'Secret Santa Event',
       description: eventData.description || '',
       organizerId,
       organizerName,
       participants: [{ userId: organizerId, email: '', displayName: organizerName, joinedAt: Date.now() }],
-      invites: [],
+      participantIds: [organizerId], // Array of UIDs for Firestore rule checks
       status: 'pending',
-      createdAt: Date.now(),
+      createdAt: serverTimestamp() as any,
       minParticipants: 3,
       ...eventData
     };
 
-    return set(ref(this.db, `events/${eventId}`), event).then(() => eventId);
+    try {
+      console.log('Creating event with data:', event);
+      const docRef = await addDoc(this.eventsCol(), event);
+      console.log('Event created successfully with ID:', docRef.id);
+      return docRef.id;
+    } catch (err) {
+      console.error('Error creating event:', err);
+      throw err;
+    }
   }
 
   getEvent(eventId: string): Observable<SecretSantaEvent | null> {
-    return new Observable(sub => {
-      const eventRef = ref(this.db, `events/${eventId}`);
-      const unsubscribe = onValue(eventRef, snapshot => {
-        sub.next(snapshot.val());
-      });
-      return unsubscribe;
-    });
+    const eventRef = doc(this.firestore, `events/${eventId}`);
+    return docData(eventRef, { idField: 'id' }).pipe(
+      map(data => (data ? data as SecretSantaEvent : null)),
+      catchError(() => of(null))
+    );
   }
 
   getUserEvents(userId: string): Observable<SecretSantaEvent[]> {
-    return new Observable(sub => {
-      const eventsRef = ref(this.db, 'events');
-      const unsubscribe = onValue(eventsRef, snapshot => {
-        const events: SecretSantaEvent[] = [];
-        snapshot.forEach(childSnapshot => {
-          const event = childSnapshot.val() as SecretSantaEvent;
-          const isParticipant = event.participants.some((p: any) => p.userId === userId);
-          const isOrganizer = event.organizerId === userId;
-          if (isParticipant || isOrganizer) {
-            events.push(event);
-          }
-        });
-        sub.next(events);
-      });
-      return unsubscribe;
-    });
+    // Query 1: Events where user is organizer
+    const organizedQuery = query(
+      this.eventsCol(),
+      where('organizerId', '==', userId)
+    );
+
+    // Query 2: Events where user is a participant (accepted invite)
+    const participatingQuery = query(
+      this.eventsCol(),
+      where('participantIds', 'array-contains', userId)
+    );
+
+    const organized$ = collectionData(organizedQuery, { idField: 'id' }).pipe(
+      map(events => events as SecretSantaEvent[]),
+      catchError(() => of([]))
+    );
+
+    const participating$ = collectionData(participatingQuery, { idField: 'id' }).pipe(
+      map(events => events as SecretSantaEvent[]),
+      catchError(() => of([]))
+    );
+
+    // Combine results and deduplicate by id
+    return combineLatest([organized$, participating$]).pipe(
+      map(([organized, participating]) => {
+        const eventMap = new Map<string, SecretSantaEvent>();
+        organized.forEach(event => eventMap.set(event.id, event));
+        participating.forEach(event => eventMap.set(event.id, event));
+        return Array.from(eventMap.values()).sort((a, b) => 
+          (b.createdAt as number - a.createdAt as number)
+        );
+      })
+    );
   }
 
   /**
    * Add a confirmed participant to the event (called when a user accepts an invite).
+   * Uses setDoc with merge to safely handle cases where event exists or needs to be created.
    */
-  addParticipant(eventId: string, userId: string, email: string, displayName: string): Promise<void> {
-    const participantRef = ref(this.db, `events/${eventId}/participants`);
-    return firebaseGet(participantRef).then(snapshot => {
-      const participants = snapshot.val() || [];
-      // avoid duplicates
-      const exists = participants.some((p: any) => p.userId === userId || p.email === email);
-      if (!exists) {
-        participants.push({ userId, email, displayName, joinedAt: Date.now() });
-      }
-      return set(participantRef, participants);
-    });
+  async addParticipant(eventId: string, userId: string, email: string, displayName: string): Promise<void> {
+    const eventRef = doc(this.firestore, `events/${eventId}`);
+    const newParticipant = { userId, email, displayName, joinedAt: Date.now() };
+    try {
+      await setDoc(eventRef, {
+        participants: arrayUnion(newParticipant),
+        participantIds: arrayUnion(userId) // Also update the IDs array for rule checks
+      }, { merge: true });
+      console.log('✅ [EventService] Participant added successfully:', { userId, eventId });
+    } catch (err) {
+      console.error('❌ [EventService] Error adding participant:', err, { userId, eventId });
+      throw err;
+    }
   }
 
   /**
    * Invite a user by email or userId. If user is not found, rejects with 'user not found'.
-   * Otherwise stores an invite record (status 'pending') under the event and under the user.
+   * Creates a Firestore invite document via InvitationService.
    */
-  inviteParticipant(eventId: string, identifier: string, displayName?: string): Promise<void> {
-    const isEmail = identifier.includes('@');
-    const usersRef = ref(this.db, `users`);
+  async inviteParticipant(eventId: string, identifier: string, inviterUserId: string, displayName?: string): Promise<void> {
+    return runInInjectionContext(this.injector, async () => {
+      const isEmail = identifier.includes('@');
+      const usersCol = collection(this.firestore, 'users');
 
-    // Read all users once and search in-memory to avoid realtime listeners (onValue) being used
-    const findAllUsers = () => {
-      return firebaseGet(ref(this.db, `users`)).then(snapshot => {
-        if (!snapshot.exists()) return {};
-        return snapshot.val();
-      });
-    };
+      console.log('🔍 Invite search started for:', identifier, '(isEmail:', isEmail, ')');
 
-    const findUserByEmail = (email: string) => {
-      return findAllUsers().then(all => {
-        const lower = email.toLowerCase();
-        for (const k of Object.keys(all)) {
-          const u = all[k];
-          if (u?.email && (u.email.toLowerCase() === lower)) {
-            return { uid: k, data: u };
+      if (isEmail) {
+        // Search by email
+        const email = identifier.trim().toLowerCase();
+        console.log('📧 Searching for user by email:', email);
+        
+        const q = query(usersCol, where('email', '==', email));
+        const snap = await fsGetDocs(q);
+        
+        console.log('📧 Email search result - found:', snap.size, 'user(s)');
+        if (snap.empty) {
+          console.error('❌ No user found with email:', email);
+          throw new Error('user not found');
+        }
+
+        const uid = snap.docs[0].id;
+        const userData = snap.docs[0].data();
+        const userName = userData?.['name'] || userData?.['displayName'] || email.split('@')[0];
+        console.log('✅ User found:', { uid, email, userData });
+
+        await this.invitationService.createInvite(eventId, inviterUserId, uid, userName);
+        console.log('✅ Invite created for email:', email);
+      } else {
+        // Try by raw identifier (could be UID or name)
+        const idOrName = identifier.trim();
+        console.log('👤 Searching for user by ID or name:', idOrName);
+
+        // First, try direct document lookup by ID
+        try {
+          console.log('🔎 Step 1: Trying direct document fetch with ID:', idOrName);
+          const userRef = doc(this.firestore, `users/${idOrName}`);
+          const userSnap = await fsGetDoc(userRef);
+          
+          if (userSnap.exists()) {
+            const uid = userSnap.id;
+            const userData = userSnap.data();
+            const userName = userData?.['name'] || userData?.['displayName'] || uid;
+            console.log('✅ User found by ID:', { uid, userData });
+            
+            await this.invitationService.createInvite(eventId, inviterUserId, uid, userName);
+            console.log('✅ Invite created for ID:', uid);
+            return;
           }
+          console.log('❌ No user document found with ID:', idOrName);
+        } catch (err) {
+          console.error('Error during direct ID lookup:', err);
         }
-        return null;
-      });
-    };
 
-    const findUserById = (uid: string) => {
-      return firebaseGet(ref(this.db, `users/${uid}`)).then(snapshot => {
-        if (!snapshot.exists()) return null;
-        return { uid, data: snapshot.val() };
-      });
-    };
-
-    const findUserByName = (name: string) => {
-      return findAllUsers().then(all => {
-        for (const k of Object.keys(all)) {
-          const u = all[k];
-          if (u?.name && (u.name === name || u.name.toLowerCase() === name.toLowerCase())) {
-            return { uid: k, data: u };
-          }
+        // Then try by name field
+        console.log('🔎 Step 2: Trying by name field:', idOrName);
+        const nameQ = query(usersCol, where('name', '==', idOrName));
+        const nameSnap = await fsGetDocs(nameQ);
+        
+        console.log('👤 Name search result - found:', nameSnap.size, 'user(s)');
+        if (!nameSnap.empty) {
+          const uid = nameSnap.docs[0].id;
+          const userData = nameSnap.docs[0].data();
+          const userName = userData?.['name'] || userData?.['displayName'] || uid;
+          console.log('✅ User found by name:', { uid, userData });
+          
+          await this.invitationService.createInvite(eventId, inviterUserId, uid, userName);
+          console.log('✅ Invite created for name:', idOrName);
+          return;
         }
-        return null;
-      });
-    };
 
-    const inviteRef = ref(this.db, `events/${eventId}/invites`);
-
-    const createInvite = (userId: string | undefined, email: string, name?: string) => {
-      return firebaseGet(inviteRef).then(snapshot => {
-        const invites = snapshot.val() || [];
-        const already = invites.some((i: any) => (userId && i.userId === userId) || i.email === email);
-        if (!already) {
-          invites.push({ userId, email, displayName: name, invitedAt: Date.now(), status: 'pending' });
-        }
-        return set(inviteRef, invites).then(() => {
-          // also write a lightweight invitation under the user for tracking (optional)
-          if (userId) {
-            return set(ref(this.db, `users/${userId}/invitations/${eventId}`), {
-              eventId,
-              email,
-              displayName: name,
-              invitedAt: Date.now(),
-              status: 'pending'
-            });
-          }
-          return Promise.resolve();
-        });
-      });
-    };
-
-    if (isEmail) {
-      const email = identifier.trim().toLowerCase();
-      return findUserByEmail(email).then(found => {
-        if (!found) {
-          return Promise.reject(new Error('user not found'));
-        }
-        const uid = found.uid;
-        const name = found.data?.name || displayName || email.split('@')[0];
-        return createInvite(uid, email, name);
-      });
-    } else {
-      const idOrName = identifier.trim();
-      // try by id first
-      return findUserById(idOrName).then(foundById => {
-        if (foundById) {
-          const email = foundById.data?.email || '';
-          const name = foundById.data?.name || displayName || email.split('@')[0];
-          return createInvite(foundById.uid, email, name);
-        }
-        // then try by display name
-        return findUserByName(idOrName).then(foundByName => {
-          if (foundByName) {
-            const email = foundByName.data?.email || '';
-            const name = foundByName.data?.name || displayName || email.split('@')[0];
-            return createInvite(foundByName.uid, email, name);
-          }
-          return Promise.reject(new Error('user not found'));
-        });
-      });
-    }
-  }
-
-  removeParticipant(eventId: string, userId: string): Promise<void> {
-    const participantRef = ref(this.db, `events/${eventId}/participants`);
-    return firebaseGet(participantRef).then(snapshot => {
-      const participants = snapshot.val() || [];
-      const filtered = participants.filter((p: any) => p.userId !== userId);
-      return set(participantRef, filtered);
+        // If all lookups fail
+        console.error('❌ User not found by ID:', idOrName, 'or name:', idOrName);
+        throw new Error('user not found');
+      }
     });
   }
 
-  updateEventStatus(eventId: string, status: 'pending' | 'active' | 'drawing' | 'completed'): Promise<void> {
-    return update(ref(this.db, `events/${eventId}`), { status });
+  async removeParticipant(eventId: string, userId: string): Promise<void> {
+    return runInInjectionContext(this.injector, async () => {
+      const eventRef = doc(this.firestore, `events/${eventId}`);
+      try {
+        await runTransaction(this.firestore, async (tx) => {
+          const snap = await tx.get(eventRef as any);
+          if (!snap.exists()) return;
+          const event = snap.data() as SecretSantaEvent;
+          const newParticipants = (event.participants || []).filter(p => p.userId !== userId);
+          const newParticipantIds = (event.participantIds || []).filter((id: string) => id !== userId);
+          tx.update(eventRef as any, { participants: newParticipants, participantIds: newParticipantIds });
+        });
+        console.log('✅ [EventService] Participant removed successfully:', { userId, eventId });
+      } catch (err) {
+        console.error('❌ [EventService] Error removing participant:', err, { userId, eventId });
+        throw err;
+      }
+    });
   }
 
-  performDrawing(eventId: string, assignments: EventAssignment[]): Promise<void> {
-    return Promise.all([
-      set(ref(this.db, `events/${eventId}/draws`), assignments),
-      update(ref(this.db, `events/${eventId}`), { status: 'completed' })
-    ]).then(() => {});
+  async updateEventStatus(eventId: string, status: 'pending' | 'active' | 'drawing' | 'completed'): Promise<void> {
+    const eventRef = doc(this.firestore, `events/${eventId}`);
+    await updateDoc(eventRef, { status });
+  }
+
+  async performDrawing(eventId: string, assignments: EventAssignment[]): Promise<void> {
+    const eventRef = doc(this.firestore, `events/${eventId}`);
+    await updateDoc(eventRef, { draws: assignments, status: 'completed' });
   }
 
   private shuffleArray<T>(array: T[]): T[] {
@@ -228,7 +242,10 @@ export class EventService {
     return assignments;
   }
 
-  deleteEvent(eventId: string): Promise<void> {
-    return set(ref(this.db, `events/${eventId}`), null);
+  async deleteEvent(eventId: string): Promise<void> {
+    const eventRef = doc(this.firestore, `events/${eventId}`);
+    // In Firestore, use deleteDoc or set to empty object. For safety, we'll set minimal data.
+    // Alternatively use: await deleteDoc(eventRef);
+    await updateDoc(eventRef, { status: 'deleted' });
   }
 }
