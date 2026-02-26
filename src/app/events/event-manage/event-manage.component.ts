@@ -132,8 +132,8 @@ import { FirestoreTimestampPipe } from '../../shared/firestore-timestamp.pipe';
                       <mat-list-item>
                         <mat-icon matListItemIcon>mail</mat-icon>
                         <div matListItemTitle>{{ invite.invitedUserName || invite.invitedUserId }}</div>
-                        <div matListItemLine>{{ invite.status | titlecase }} — {{ invite.createdAt | fsTimestamp | date:'short' }}</div>
-                        <button mat-icon-button matListItemMeta *ngIf="invite.id && currentUserId === event?.organizerId" (click)="onCancelInvite(invite.id)">
+                        <div matListItemLine>{{ invite.status | titlecase }} — {{ invite.createdAt | fsTimestamp | date:'dd/MM/yyyy hh:mm' }}</div>
+                        <button matListItemMeta *ngIf="invite.id && currentUserId === event?.organizerId" (click)="onCancelInvite(invite.id)">
                           <mat-icon>cancel</mat-icon>
                         </button>
                       </mat-list-item>

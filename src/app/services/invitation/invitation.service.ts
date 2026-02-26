@@ -1,5 +1,6 @@
 import { inject, Injectable, Injector, runInInjectionContext } from '@angular/core';
-import { Firestore, collection, collectionData, doc, docData, query, where, getDocs as fsGetDocs, addDoc as fsAddDoc, serverTimestamp, runTransaction, updateDoc } from '@angular/fire/firestore';
+import { FirebaseError } from '@angular/fire/app';
+import { Firestore, collection, collectionData, doc, docData, query, where, getDocs as fsGetDocs, addDoc as fsAddDoc, serverTimestamp, runTransaction } from '@angular/fire/firestore';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
@@ -26,16 +27,23 @@ export class InvitationService {
 
       try {
         // Check for existing invite
+        // todo: now when there was a invite and it was cancelled and we create new one, then new invite will be created
+        // but maybe we should update status from cancelled to pending and update createdAt timestamp?
         const q = query(
           this.invitesCol(),
           where('eventId', '==', eventId),
-          where('invitedUserId', '==', invitedUserId)
+          where('invitedUserId', '==', invitedUserId),
+          where('status', '==', 'pending') // Only consider pending invites as duplicates
         );
 
         let snap;
         try {
           snap = await fsGetDocs(q);
-        } catch (err) {
+        } 
+        catch (err) {
+          if (err instanceof FirebaseError) {
+              throw err;
+          }
           console.warn('⚠️ Could not query invites (collection might not exist yet):', err);
           snap = null; // treat as empty
         }
